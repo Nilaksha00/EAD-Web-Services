@@ -21,7 +21,7 @@ namespace EAD_Project.Data
             await _traveller.Find(_ => true).ToListAsync();
 
         // get a single traveller with id
-        public async Task<Traveller> GetTravellerAccount(string id) =>
+        public async Task<Traveller> GetTravellerAccount(string? id) =>
             await _traveller.Find(m => m._id == id).FirstOrDefaultAsync();
 
         // add a new traveller acc
@@ -53,6 +53,7 @@ namespace EAD_Project.Data
 
             await _traveller.UpdateOneAsync(filter, update);
         }
+
 
     }
 }
