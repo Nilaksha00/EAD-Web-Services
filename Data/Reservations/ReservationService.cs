@@ -2,6 +2,10 @@
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongoDB.Bson;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using EAD_Project.Data.TrainSchedules;
+using System.Globalization;
 
 namespace EAD_Project.Data.Reservations
 {
@@ -9,8 +13,10 @@ namespace EAD_Project.Data.Reservations
     {
         private readonly IMongoCollection<Reservation> _reservation;
         private readonly IMongoCollection<Traveller> _traveller;
+        private readonly TravellerService _travellerService; 
+        private readonly TrainScheduleService _trainScheduleService; 
 
-        public ReservationService(IOptions<EADDatabaseSettings> options)
+        public ReservationService(IOptions<EADDatabaseSettings> options, TravellerService travellerService, TrainScheduleService trainScheduleService)
         {
             var mongoClient = new MongoClient(options.Value.ConnectionString);
 
@@ -19,20 +25,185 @@ namespace EAD_Project.Data.Reservations
 
             _traveller = mongoClient.GetDatabase(options.Value.DatabaseName)
                 .GetCollection<Traveller>(options.Value.TravellerCollectionName);
+
+            _travellerService = travellerService;
+            _trainScheduleService = trainScheduleService;
         }
 
-        // add a new reservation
-        public async Task CreateReservation(Reservation newRersevation) =>
-            await _reservation.InsertOneAsync(newRersevation);
+        // add a new reservation (Is train schedules are published)
+        public async Task CreateReservation(Reservation newReservation)
+        {
+            // Check if the specified train schedule ID exists
+            var trainSchedule = await _trainScheduleService.GetTrainSchedule(newReservation.reservationTrainScheduleID);
 
-        // view reservation list
-        public async Task<List<Reservation>> GetReservations() =>
-            await _reservation.Find(_ => true).ToListAsync();
+            if (trainSchedule == null)
+            {
+                // Train schedule not found, throw an exception or handle accordingly
+                throw new ArgumentException($"Invalid train schedule ID: {newReservation.reservationTrainScheduleID}");
+            }
 
-        // view reservation
-        public async Task<Reservation> GetReservation(string id) =>
-            await _reservation.Find(m => m.reservationID == id).FirstOrDefaultAsync();
+            // Continue with creating the reservation
+            await _reservation.InsertOneAsync(newReservation);
 
-        //
+
+            // Add the reservation ID to the TrainSchedule's reservations array
+            if (trainSchedule.reservations == null)
+            {
+                trainSchedule.reservations = new List<Reservation>();
+            }
+
+            trainSchedule.reservations.Add(new Reservation { reservationID = newReservation.reservationID });
+
+            // Update the TrainSchedule with the new reservation ID
+            await _trainScheduleService.UpdateTrainSchedule(trainSchedule.trainScheduleID, trainSchedule);
+        }
+
+
+        // view reservation list with relevant user details
+        public async Task<List<ReservationWithTravellerDetails>> GetReservationsWithDetails()
+        {
+            var reservations = await _reservation.Find(_ => true).ToListAsync();
+            var reservationsWithDetails = new List<ReservationWithTravellerDetails>();
+
+            foreach (var reservation in reservations)
+            {
+
+                var travellerDetails = await _travellerService.GetTravellerAccount(reservation.reservationTravellerID);
+
+                Console.WriteLine($"Traveller Details: {travellerDetails}");
+
+                reservationsWithDetails.Add(new ReservationWithTravellerDetails
+                {
+                    Reservation = reservation,
+                    TravellerDetails = travellerDetails
+                });
+            }
+
+            return reservationsWithDetails;
+        }
+
+        // get a single reservation with user details by reservation ID
+        public async Task<ReservationWithTravellerDetails?> GetReservationWithDetails(string reservationId)
+        {
+            var reservation = await _reservation.Find(r => r.reservationID == reservationId).FirstOrDefaultAsync();
+
+            if (reservation == null)
+            {
+                // Reservation not found
+                return null;
+            }
+
+            var travellerDetails = await _travellerService.GetTravellerAccount(reservation.reservationTravellerID);
+
+            return new ReservationWithTravellerDetails
+            {
+                Reservation = reservation,
+                TravellerDetails = travellerDetails
+            };
+        }
+
+        public async Task UpdateReservation(string? reservationId, Reservation updatedReservation)
+        {
+            // Check if the reservation exists
+            var existingReservation = await _reservation.Find(r => r.reservationID == reservationId).FirstOrDefaultAsync();
+
+            if (existingReservation == null)
+            {
+                // Reservation not found, throw an exception or handle accordingly
+                throw new ArgumentException($"Reservation not found with ID: {reservationId}");
+            }
+
+            // Calculate the days difference
+            int daysDifference = CalculateDaysDifference(existingReservation.reservationDate);
+
+            // Check if the days difference is less than 5
+            if (daysDifference < 5)
+            {
+                // Continue with the update
+                updatedReservation.reservationID = reservationId;
+
+                // Replace the existing reservation with the updated one
+                var updateResult = await _reservation.ReplaceOneAsync(r => r.reservationID == reservationId, updatedReservation);
+
+                if (updateResult.ModifiedCount == 0)
+                {
+                    // Update did not modify any documents, likely due to the reservation not existing
+                    throw new InvalidOperationException($"Update failed. Reservation not found with ID: {reservationId}");
+                }
+            }
+            else
+            {
+                // Reservation date is not valid for update
+                throw new InvalidOperationException("Reservation date is not valid for update.");
+            }
+        }
+
+
+        // delete a reservation
+        public async Task DeleteReservation(string? reservationId)
+        {
+            // Check if the reservation exists
+            var existingReservation = await _reservation.Find(r => r.reservationID == reservationId).FirstOrDefaultAsync();
+
+            if (existingReservation == null)
+            {
+                // Reservation not found, throw an exception or handle accordingly
+                throw new ArgumentException($"Reservation not found with ID: {reservationId}");
+            }
+
+            // Calculate the days difference
+            int daysDifference = CalculateDaysDifference(existingReservation.reservationDate);
+
+            // Check if the days difference is less than 5
+            if (daysDifference < 5)
+            {
+             
+                // Continue with the deletion
+                await _reservation.DeleteOneAsync(r => r.reservationID == reservationId);
+            }
+            else
+            {
+                // Reservation date is not valid for update
+                throw new InvalidOperationException("Reservation date is not valid for delete.");
+            }
+
+        }
+
+
+
+        // Helper function to calculate the days difference
+        private int CalculateDaysDifference(string? reservationDate)
+        {
+            DateTimeOffset currentDate = DateTimeOffset.UtcNow;
+
+            if (DateTimeOffset.TryParse(reservationDate, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out DateTimeOffset reservationDateTime))
+            {
+                Console.WriteLine($"currentDate : {currentDate}");
+                Console.WriteLine($"reservationDateTime Id: {reservationDateTime}");
+
+                // Calculate the days difference
+                return (int)(currentDate - reservationDateTime).TotalDays;
+            }
+            else
+            {
+                // Invalid date format
+                Console.WriteLine("Invalid date format.");
+                return int.MaxValue; // or throw an exception depending on your requirements
+            }
+        }
+
+
+    }
+
+    public class ReservationWithTravellerDetails
+    {
+        public Reservation? Reservation { get; set; }
+        public Traveller? TravellerDetails { get; set; }
+    }
+
+    public class ReservationWithTrainScheduleDetails
+    {
+        public Reservation? Reservation { get; set; }
+        public TrainSchedule? TrainScheduleDetails { get; set; }
     }
 }

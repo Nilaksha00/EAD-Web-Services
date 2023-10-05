@@ -1,4 +1,5 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using EAD_Project.Data.Reservations;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace EAD_Project.Data.TrainSchedules
 {
@@ -11,6 +12,6 @@ namespace EAD_Project.Data.TrainSchedules
         public string? trainScheduleDept { get; set; }
         public string? trainScheduleArr { get; set; }
         public string? trainScheduleTrainID { get; set; }
-
+        public List<Reservation>? reservations { get; set; }
     }
 }
