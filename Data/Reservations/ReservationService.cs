@@ -30,7 +30,7 @@ namespace EAD_Project.Data.Reservations
             _trainScheduleService = trainScheduleService;
         }
 
-        // add a new reservation (Is train schedules are published)
+        // add a new reservation (Is train schedules are published and reservation date is within 30 days from the booking date)
         public async Task CreateReservation(Reservation newReservation)
         {
             // Check if the specified train schedule ID exists
@@ -40,6 +40,12 @@ namespace EAD_Project.Data.Reservations
             {
                 // Train schedule not found, throw an exception or handle accordingly
                 throw new ArgumentException($"Invalid train schedule ID: {newReservation.reservationTrainScheduleID}");
+            }
+
+            // Check if the reservation date is within 30 days from the booking date
+            if (!IsReservationDateValid(newReservation.reservationDate))
+            {
+                throw new ArgumentException($"Invalid reservation date: {newReservation.reservationDate}");
             }
 
             // Continue with creating the reservation
@@ -192,7 +198,20 @@ namespace EAD_Project.Data.Reservations
             }
         }
 
+        // Helper function to check if the reservation date is within 30 days from the booking date
+        private bool IsReservationDateValid(string? reservationDate)
+        {
+            // Implement the logic to check if the reservation date is within 30 days from the booking date
+            if (DateTime.TryParse(reservationDate, out DateTime parsedDate))
+            {
+                DateTime currentDate = DateTime.UtcNow.Date;
+                return (parsedDate - currentDate).Days <= 30;
+            }
 
+            return false;
+        }
+
+       
     }
 
     public class ReservationWithTravellerDetails
