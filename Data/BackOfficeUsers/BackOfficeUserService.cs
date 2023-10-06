@@ -16,15 +16,40 @@ namespace EAD_Project.Data.BackOfficeUsers
 
         } 
         
+
         // get a single back office user with id
         public async Task<BackOfficeUser> GetBackOfficeUserAccount(string id) =>
             await _backOfficeUser.Find(m => m.backOfficerID == id).FirstOrDefaultAsync();
 
-        // add a new traveller acc
-        public async Task CreateBackOfficeUserAccount(BackOfficeUser newBackOfficeUser) =>
-            await _backOfficeUser.InsertOneAsync(newBackOfficeUser);
 
-        
+        // add a new back office user acc
+        public async Task CreateBackOfficeUserAccount(BackOfficeUser newBackOfficeUser)
+        {
+            newBackOfficeUser.backOfficerPassword = HashPassword(newBackOfficeUser.backOfficerPassword);
+            await _backOfficeUser.InsertOneAsync(newBackOfficeUser);
+        }       
+
+
+        // login back office user
+        public async Task<BackOfficeUser> LoginUser(Login login)
+        {
+            var backOfficeUser = await _backOfficeUser.Find(m => m.backOfficerEmail == login.email).FirstOrDefaultAsync();
+
+            if (backOfficeUser != null)
+            {
+                if (BCrypt.Net.BCrypt.Verify(login.password, backOfficeUser.backOfficerPassword))
+                {
+                    return backOfficeUser;
+                }
+            }
+            return null;
+        }
+
+        // helper function to hash the password
+        private string HashPassword(string password)
+        {
+            return BCrypt.Net.BCrypt.HashPassword(password);
+        }
     }
 
    
