@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using EAD_Project.Data.TrainSchedules;
 using System.Globalization;
+using MongoDB.Driver.Linq;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace EAD_Project.Data.Reservations
 {
@@ -169,6 +171,31 @@ namespace EAD_Project.Data.Reservations
 
         }
 
+        // traveller dashboard - get the reservation list of upcoming reservations
+        public async Task<List<Reservation?>> GetReservationWithDetailsAheadOfToday(string id)
+        {
+            var currentDate = DateTime.UtcNow.Date;
+            var currentDateAsString = currentDate.ToString("yyyy-MM-dd");
+            var currentDateAsDateTime = DateTime.Parse(currentDateAsString);
+
+            var reservations = await _reservation
+                .Find(r => r.reservationTravellerID == id)
+                .ToListAsync();
+
+            var reservationsAhead = reservations.FindAll(r => DateTime.Parse(r.reservationDate) > currentDateAsDateTime);
+
+            return reservationsAhead;
+        }
+
+        // traveller dashboard - get the reservation history list 
+        public async Task<List<Reservation?>> GetReservationOfATraveller(string? id)
+        {
+            var reservations = await _reservation
+                .Find(r => r.reservationTravellerID == id)
+                .ToListAsync();
+
+            return reservations;
+        }
 
 
         // Helper function to calculate the days difference
