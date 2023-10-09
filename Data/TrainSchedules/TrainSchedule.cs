@@ -12,6 +12,8 @@ namespace EAD_Project.Data.TrainSchedules
         public string? trainScheduleDept { get; set; }
         public string? trainScheduleArr { get; set; }
         public string? trainScheduleTrainID { get; set; }
+        public string? trainScheduleDestinationPoint { get; set; }
+        public string? trainScheduleDeparturePoint { get; set; }
         public List<Reservation>? reservations { get; set; }
     }
 }

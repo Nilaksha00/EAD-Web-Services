@@ -74,14 +74,22 @@ namespace EAD_Project.Data.Reservations
             foreach (var reservation in reservations)
             {
 
-                var travellerDetails = await _travellerService.GetTravellerAccount(reservation.reservationTravellerID);
+                //var travellerDetails = await _travellerService.GetTravellerAccount(reservation.reservationTravellerID);
 
-                Console.WriteLine($"Traveller Details: {travellerDetails}");
+                var trainScheduleDetails = await _trainScheduleService.GetTrainSchedule(reservation.reservationTrainScheduleID);
+
+                //Console.WriteLine($"Traveller Details: {travellerDetails}");
 
                 reservationsWithDetails.Add(new ReservationWithTravellerDetails
                 {
                     Reservation = reservation,
-                    TravellerDetails = travellerDetails
+                    //TravellerDetails = travellerDetails,
+                    TrainScheduleDetails = new TrainSchedule
+                    {
+                        trainScheduleDept = trainScheduleDetails.trainScheduleDept,
+                        trainScheduleArr = trainScheduleDetails.trainScheduleArr,
+                        trainScheduleTrainID = trainScheduleDetails.trainScheduleTrainID
+                    }
                 });
             }
 
@@ -99,12 +107,20 @@ namespace EAD_Project.Data.Reservations
                 return null;
             }
 
-            var travellerDetails = await _travellerService.GetTravellerAccount(reservation.reservationTravellerID);
+            //var travellerDetails = await _travellerService.GetTravellerAccount(reservation.reservationTravellerID);
+            var trainScheduleDetails = await _trainScheduleService.GetTrainSchedule(reservation.reservationTrainScheduleID);
+
 
             return new ReservationWithTravellerDetails
             {
                 Reservation = reservation,
-                TravellerDetails = travellerDetails
+                //TravellerDetails = travellerDetails,
+                TrainScheduleDetails = new TrainSchedule
+                {
+                    trainScheduleDept = trainScheduleDetails.trainScheduleDept,
+                    trainScheduleArr = trainScheduleDetails.trainScheduleArr,
+                    trainScheduleTrainID = trainScheduleDetails.trainScheduleTrainID
+                }
             };
         }
 
@@ -217,7 +233,8 @@ namespace EAD_Project.Data.Reservations
     public class ReservationWithTravellerDetails
     {
         public Reservation? Reservation { get; set; }
-        public Traveller? TravellerDetails { get; set; }
+        //public Traveller? TravellerDetails { get; set; }
+        public TrainSchedule? TrainScheduleDetails { get; set; }
     }
 
     public class ReservationWithTrainScheduleDetails
