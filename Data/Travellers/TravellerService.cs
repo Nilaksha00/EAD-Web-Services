@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using BCrypt.Net;
 
 namespace EAD_Project.Data
 {
@@ -16,6 +17,22 @@ namespace EAD_Project.Data
 
         }
 
+        // login traveller 
+        public async Task<Traveller> LoginUser(Login login)
+        {
+            var traveler = await _traveller.Find(m => m.travellerEmail == login.email).FirstOrDefaultAsync();
+
+            if (traveler != null)
+            {
+                if (BCrypt.Net.BCrypt.Verify(login.password, traveler.travellerPassword))
+                {
+                    return traveler;
+                }
+            }
+            return null;
+        }
+
+
         //get traveller list
         public async Task<List<Traveller>> GetTravellerAccounts() =>
             await _traveller.Find(_ => true).ToListAsync();
@@ -25,8 +42,12 @@ namespace EAD_Project.Data
             await _traveller.Find(m => m._id == id).FirstOrDefaultAsync();
 
         // add a new traveller acc
-        public async Task CreateTravellerAccount(Traveller newTraveller) =>
+        public async Task CreateTravellerAccount(Traveller newTraveller)
+        {
+            newTraveller.travellerPassword  = HashPassword(newTraveller.travellerPassword);
             await _traveller.InsertOneAsync(newTraveller);
+
+        }
 
         // update a traveller acc
         public async Task UpdateTravellerAccount(string id, Traveller updateTraveller) =>
@@ -52,6 +73,12 @@ namespace EAD_Project.Data
             var update = Builders<Traveller>.Update.Set("travellerAccStatus", 0);
 
             await _traveller.UpdateOneAsync(filter, update);
+        }
+
+        // helper function to hash the password
+        private string HashPassword(string password)
+        {
+            return BCrypt.Net.BCrypt.HashPassword(password);
         }
 
 

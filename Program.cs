@@ -2,24 +2,54 @@ using EAD_Project.Data;
 using EAD_Project.Data.BackOfficeUsers;
 using EAD_Project.Data.Reservations;
 using EAD_Project.Data.TrainSchedules;
-using MongoDB.Driver.Core.Operations;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<EADDatabaseSettings>(builder.Configuration.GetSection("EADDatabaseSettings"));
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddSingleton<TravellerService>();
 builder.Services.AddSingleton<BackOfficeUserService>();
 builder.Services.AddSingleton<ReservationService>(); 
 builder.Services.AddSingleton<TrainScheduleService>(); 
 var app = builder.Build();
 
+app.UseCors("AllowAll");
 
 
 // landing page
 app.MapGet("/", () => "Traveller API!");
 
 
+
 // ***************************************** TRAVELLER SERVICES **********************************************
 
+//login traveller
+app.MapPost("/api/travellers/login", async (Login login, TravellerService travellerService) =>
+{
+
+    if (string.IsNullOrEmpty(login.email) || string.IsNullOrEmpty(login.password))
+    {
+        return null;
+    }
+
+    // Check if a traveler with the provided email and password exists
+    var traveler = await travellerService.LoginUser(login);
+
+    if (traveler == null)
+    { 
+        return null;
+    }
+
+    return traveler;
+});
 
 //add traveller
 app.MapPost("/api/travellers/add-traveller", async (TravellerService travellerService, Traveller traveller) =>
@@ -114,6 +144,25 @@ app.MapPut("api/traveller/deactivate/{id}", async (TravellerService travellerSer
 
 // ***************************************** BACK OFFICE USER SERVICES *****************************************
 
+//login back office user
+app.MapPost("/api/backoffice/login", async (Login login, BackOfficeUserService backOfficeUserService) =>
+{
+
+    if (string.IsNullOrEmpty(login.email) || string.IsNullOrEmpty(login.password))
+    {
+        return null;
+    }
+
+    // Check if a traveler with the provided email and password exists
+    var traveler = await backOfficeUserService.LoginUser(login);
+
+    if (traveler == null)
+    {
+        return null;
+    }
+
+    return traveler;
+});
 
 // get a single back office user with id
 app.MapGet("/api/backoffice/{id}", async (BackOfficeUserService backOfficeUserService, string id) =>
@@ -190,6 +239,21 @@ app.MapDelete("/api/reservation/{id}", async (ReservationService reservationServ
         return Results.NotFound($"Traveler with ID {id} not found.");
     }
 });
+
+// traveller dashboard - get the reservation list of upcoming reservations
+app.MapGet("/api/reservations/summary/{id}", async (ReservationService reservationService, string id) =>
+{
+    var reservations = await reservationService.GetReservationWithDetailsAheadOfToday(id);
+    return reservations;
+});
+
+// traveller dashboard - get the reservation history list 
+app.MapGet("/api/traveller/reservations/{id}", async (ReservationService reservationService, string id) =>
+{
+    var reservations = await reservationService.GetReservationOfATraveller(id);
+    return reservations;
+});
+
 
 // ***************************************** TRAIN SCHEDULE *****************************************
 
