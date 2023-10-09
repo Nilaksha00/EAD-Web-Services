@@ -2,16 +2,26 @@ using EAD_Project.Data;
 using EAD_Project.Data.BackOfficeUsers;
 using EAD_Project.Data.Reservations;
 using EAD_Project.Data.TrainSchedules;
-using MongoDB.Driver.Core.Operations;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<EADDatabaseSettings>(builder.Configuration.GetSection("EADDatabaseSettings"));
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddSingleton<TravellerService>();
 builder.Services.AddSingleton<BackOfficeUserService>();
 builder.Services.AddSingleton<ReservationService>(); 
 builder.Services.AddSingleton<TrainScheduleService>(); 
 var app = builder.Build();
 
+app.UseCors("AllowAll");
 
 
 // landing page
