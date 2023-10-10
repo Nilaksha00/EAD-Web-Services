@@ -12,5 +12,6 @@ namespace EAD_Project.Data.Reservations
         public string? reservationTrainScheduleID { get; set; }
         public string? reservationCreatorID { get; set; }
         public string? reservationCreatorName { get; set; }
+        public string? reservationNoOfSeats { get; set; }
     }
 }
