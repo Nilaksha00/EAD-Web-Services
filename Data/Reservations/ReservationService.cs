@@ -90,7 +90,9 @@ namespace EAD_Project.Data.Reservations
                     {
                         trainScheduleDept = trainScheduleDetails.trainScheduleDept,
                         trainScheduleArr = trainScheduleDetails.trainScheduleArr,
-                        trainScheduleTrainID = trainScheduleDetails.trainScheduleTrainID
+                        trainScheduleTrainID = trainScheduleDetails.trainScheduleTrainID,
+                        trainScheduleDestinationPoint = trainScheduleDetails.trainScheduleDestinationPoint,
+                        trainScheduleDeparturePoint = trainScheduleDetails.trainScheduleDeparturePoint
                     }
                 });
             }
@@ -121,7 +123,9 @@ namespace EAD_Project.Data.Reservations
                 {
                     trainScheduleDept = trainScheduleDetails.trainScheduleDept,
                     trainScheduleArr = trainScheduleDetails.trainScheduleArr,
-                    trainScheduleTrainID = trainScheduleDetails.trainScheduleTrainID
+                    trainScheduleTrainID = trainScheduleDetails.trainScheduleTrainID,
+                    trainScheduleDestinationPoint = trainScheduleDetails.trainScheduleDestinationPoint,
+                    trainScheduleDeparturePoint = trainScheduleDetails.trainScheduleDeparturePoint
                 }
             };
         }
