@@ -32,7 +32,7 @@ namespace EAD_Project.Data.Reservations
             _trainScheduleService = trainScheduleService;
         }
 
-        // add a new reservation (Is train schedules are published)
+        // add a new reservation (Is train schedules are published and reservation date is within 30 days from the booking date)
         public async Task CreateReservation(Reservation newReservation)
         {
             // Check if the specified train schedule ID exists
@@ -42,6 +42,12 @@ namespace EAD_Project.Data.Reservations
             {
                 // Train schedule not found, throw an exception or handle accordingly
                 throw new ArgumentException($"Invalid train schedule ID: {newReservation.reservationTrainScheduleID}");
+            }
+
+            // Check if the reservation date is within 30 days from the booking date
+            if (!IsReservationDateValid(newReservation.reservationDate))
+            {
+                throw new ArgumentException($"Invalid reservation date: {newReservation.reservationDate}");
             }
 
             // Continue with creating the reservation
@@ -70,14 +76,22 @@ namespace EAD_Project.Data.Reservations
             foreach (var reservation in reservations)
             {
 
-                var travellerDetails = await _travellerService.GetTravellerAccount(reservation.reservationTravellerID);
+                //var travellerDetails = await _travellerService.GetTravellerAccount(reservation.reservationTravellerID);
 
-                Console.WriteLine($"Traveller Details: {travellerDetails}");
+                var trainScheduleDetails = await _trainScheduleService.GetTrainSchedule(reservation.reservationTrainScheduleID);
+
+                //Console.WriteLine($"Traveller Details: {travellerDetails}");
 
                 reservationsWithDetails.Add(new ReservationWithTravellerDetails
                 {
                     Reservation = reservation,
-                    TravellerDetails = travellerDetails
+                    //TravellerDetails = travellerDetails,
+                    TrainScheduleDetails = new TrainSchedule
+                    {
+                        trainScheduleDept = trainScheduleDetails.trainScheduleDept,
+                        trainScheduleArr = trainScheduleDetails.trainScheduleArr,
+                        trainScheduleTrainID = trainScheduleDetails.trainScheduleTrainID
+                    }
                 });
             }
 
@@ -95,12 +109,20 @@ namespace EAD_Project.Data.Reservations
                 return null;
             }
 
-            var travellerDetails = await _travellerService.GetTravellerAccount(reservation.reservationTravellerID);
+            //var travellerDetails = await _travellerService.GetTravellerAccount(reservation.reservationTravellerID);
+            var trainScheduleDetails = await _trainScheduleService.GetTrainSchedule(reservation.reservationTrainScheduleID);
+
 
             return new ReservationWithTravellerDetails
             {
                 Reservation = reservation,
-                TravellerDetails = travellerDetails
+                //TravellerDetails = travellerDetails,
+                TrainScheduleDetails = new TrainSchedule
+                {
+                    trainScheduleDept = trainScheduleDetails.trainScheduleDept,
+                    trainScheduleArr = trainScheduleDetails.trainScheduleArr,
+                    trainScheduleTrainID = trainScheduleDetails.trainScheduleTrainID
+                }
             };
         }
 
@@ -219,13 +241,27 @@ namespace EAD_Project.Data.Reservations
             }
         }
 
+        // Helper function to check if the reservation date is within 30 days from the booking date
+        private bool IsReservationDateValid(string? reservationDate)
+        {
+            // Implement the logic to check if the reservation date is within 30 days from the booking date
+            if (DateTime.TryParse(reservationDate, out DateTime parsedDate))
+            {
+                DateTime currentDate = DateTime.UtcNow.Date;
+                return (parsedDate - currentDate).Days <= 30;
+            }
 
+            return false;
+        }
+
+       
     }
 
     public class ReservationWithTravellerDetails
     {
         public Reservation? Reservation { get; set; }
-        public Traveller? TravellerDetails { get; set; }
+        //public Traveller? TravellerDetails { get; set; }
+        public TrainSchedule? TrainScheduleDetails { get; set; }
     }
 
     public class ReservationWithTrainScheduleDetails
