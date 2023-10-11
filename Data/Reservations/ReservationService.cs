@@ -130,6 +130,8 @@ namespace EAD_Project.Data.Reservations
             };
         }
 
+
+        // update a reservation
         public async Task UpdateReservation(string? reservationId, Reservation updatedReservation)
         {
             // Check if the reservation exists
@@ -145,7 +147,7 @@ namespace EAD_Project.Data.Reservations
             int daysDifference = CalculateDaysDifference(existingReservation.reservationDate);
 
             // Check if the days difference is less than 5
-            if (daysDifference < 5)
+            if (daysDifference >= 5)
             {
                 // Continue with the update
                 updatedReservation.reservationID = reservationId;
@@ -183,7 +185,7 @@ namespace EAD_Project.Data.Reservations
             int daysDifference = CalculateDaysDifference(existingReservation.reservationDate);
 
             // Check if the days difference is less than 5
-            if (daysDifference < 5)
+            if (daysDifference >= 5)
             {
              
                 // Continue with the deletion
@@ -197,31 +199,76 @@ namespace EAD_Project.Data.Reservations
 
         }
 
+   
+
         // traveller dashboard - get the reservation list of upcoming reservations
-        public async Task<List<Reservation?>> GetReservationWithDetailsAheadOfToday(string id)
+        public async Task<List<ReservationWithTravellerDetails>> GetReservationWithDetailsAheadOfToday(string id)
         {
-            var currentDate = DateTime.UtcNow.Date;
-            var currentDateAsString = currentDate.ToString("yyyy-MM-dd");
-            var currentDateAsDateTime = DateTime.Parse(currentDateAsString);
+            var currentDate = DateTime.Now;
+
+            var reservations = await _reservation
+                .Find(r => r.reservationTravellerID == id && DateTime.Parse(r.reservationDate) > currentDate)
+                .ToListAsync();
+
+            var reservationsWithDetails = new List<ReservationWithTravellerDetails>();
+
+            foreach (var reservation in reservations)
+            {
+                var trainScheduleDetails = await _trainScheduleService.GetTrainSchedule(reservation.reservationTrainScheduleID);
+
+                reservationsWithDetails.Add(new ReservationWithTravellerDetails
+                {
+                    Reservation = reservation,
+                    TrainScheduleDetails = new TrainSchedule
+                    {
+                        trainScheduleDept = trainScheduleDetails.trainScheduleDept,
+                        trainScheduleArr = trainScheduleDetails.trainScheduleArr,
+                        trainScheduleTrainID = trainScheduleDetails.trainScheduleTrainID,
+                        trainScheduleDestinationPoint = trainScheduleDetails.trainScheduleDestinationPoint,
+                        trainScheduleDeparturePoint = trainScheduleDetails.trainScheduleDeparturePoint
+                    }
+                });
+            }
+
+            return reservationsWithDetails;
+        }
+
+     
+
+        // traveller dashboard - get the reservation list of upcoming reservations
+        public async Task<List<ReservationWithTravellerDetails>> GetReservationOfATraveller(string id)
+        {
+            var currentDate = DateTime.Now;
 
             var reservations = await _reservation
                 .Find(r => r.reservationTravellerID == id)
                 .ToListAsync();
 
-            var reservationsAhead = reservations.FindAll(r => DateTime.Parse(r.reservationDate) > currentDateAsDateTime);
+            var reservationsWithDetails = new List<ReservationWithTravellerDetails>();
 
-            return reservationsAhead;
+            foreach (var reservation in reservations)
+            {
+                var trainScheduleDetails = await _trainScheduleService.GetTrainSchedule(reservation.reservationTrainScheduleID);
+
+                reservationsWithDetails.Add(new ReservationWithTravellerDetails
+                {
+                    Reservation = reservation,
+                    TrainScheduleDetails = new TrainSchedule
+                    {
+                        trainScheduleDept = trainScheduleDetails.trainScheduleDept,
+                        trainScheduleArr = trainScheduleDetails.trainScheduleArr,
+                        trainScheduleTrainID = trainScheduleDetails.trainScheduleTrainID,
+                        trainScheduleDestinationPoint = trainScheduleDetails.trainScheduleDestinationPoint,
+                        trainScheduleDeparturePoint = trainScheduleDetails.trainScheduleDeparturePoint
+                    }
+                });
+            }
+
+            return reservationsWithDetails;
         }
 
-        // traveller dashboard - get the reservation history list 
-        public async Task<List<Reservation?>> GetReservationOfATraveller(string? id)
-        {
-            var reservations = await _reservation
-                .Find(r => r.reservationTravellerID == id)
-                .ToListAsync();
 
-            return reservations;
-        }
+
 
 
         // Helper function to calculate the days difference
@@ -235,7 +282,7 @@ namespace EAD_Project.Data.Reservations
                 Console.WriteLine($"reservationDateTime Id: {reservationDateTime}");
 
                 // Calculate the days difference
-                return (int)(currentDate - reservationDateTime).TotalDays;
+                return (int)(reservationDateTime - currentDate).TotalDays;
             }
             else
             {
