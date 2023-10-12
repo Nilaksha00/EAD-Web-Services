@@ -24,13 +24,24 @@ namespace EAD_Project.Data
 
             if (traveler != null)
             {
-                if (BCrypt.Net.BCrypt.Verify(login.password, traveler.travellerPassword))
+                if (traveler.travellerAccStatus == 1) // Check account status
                 {
-                    return traveler;
+                    if (BCrypt.Net.BCrypt.Verify(login.password, traveler.travellerPassword))
+                    {
+                        return traveler;
+                    }
+                }
+                else
+                {
+                    // Account is not active, return relevant error
+                    throw new ApplicationException("User account is not active. Please contact support.");
                 }
             }
+
+            // User not found or password incorrect
             return null;
         }
+
 
 
         //get traveller list
