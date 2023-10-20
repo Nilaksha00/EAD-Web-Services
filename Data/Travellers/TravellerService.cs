@@ -61,8 +61,34 @@ namespace EAD_Project.Data
         }
 
         // update a traveller acc
-        public async Task UpdateTravellerAccount(string id, Traveller updateTraveller) =>
-            await _traveller.ReplaceOneAsync(m => m._id == id, updateTraveller);
+        //public async Task UpdateTravellerAccount(string id, Traveller updateTraveller) =>
+        //    await _traveller.ReplaceOneAsync(m => m._id == id, updateTraveller);
+
+
+
+        //public string? _id { get; set; }
+        //public string? travellerEmail { get; set; }
+        //public string? travellerPassword { get; set; }
+        //public string? travellerName { get; set; }
+        //public int? travellerAge { get; set; }
+        //public string? travellerCity { get; set; }
+        //public string? travellerPhone { get; set; }
+        //public int? travellerAccStatus { get; set; }
+
+
+        public async Task UpdateTravellerAccount(string id, Traveller updateTraveller)
+        {
+            var filter = Builders<Traveller>.Filter.Eq(m => m._id, id);
+            var update = Builders<Traveller>.Update
+                .Set("travellerEmail", updateTraveller.travellerEmail)
+                .Set("travellerName", updateTraveller.travellerName)
+                .Set("travellerAge", updateTraveller.travellerAge)
+                .Set("travellerCity", updateTraveller.travellerCity)
+                .Set("travellerPhone", updateTraveller.travellerPhone);
+            await _traveller.UpdateOneAsync(filter, update);
+        }
+
+
 
         // delete a traveller acc
         public async Task RemoveTravellerAccount(string id) =>
@@ -89,7 +115,8 @@ namespace EAD_Project.Data
         // helper function to hash the password
         private string HashPassword(string password)
         {
-            return BCrypt.Net.BCrypt.HashPassword(password);
+            string salt = BCrypt.Net.BCrypt.GenerateSalt(12);
+            return BCrypt.Net.BCrypt.HashPassword(password, salt);
         }
 
 
